@@ -306,6 +306,9 @@ function NavBar({ locale, onLocaleToggle }: { locale: Language; onLocaleToggle: 
           <Link href="/dashboard" className="text-sm text-io-secondary hover:text-io-accent transition-colors">
             {isRtl ? "لوحة المعلومات" : "Dashboard"}
           </Link>
+          <Link href="/macro" className="text-sm text-io-secondary hover:text-io-accent transition-colors">
+            {isRtl ? "الاقتصاد الكلي" : "Macro"}
+          </Link>
           <Link href="/audit-dashboard" className="text-sm text-io-accent font-medium">
             {isRtl ? "الحوكمة" : "Governance"}
           </Link>

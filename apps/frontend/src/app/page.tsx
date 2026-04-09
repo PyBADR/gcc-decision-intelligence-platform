@@ -149,6 +149,18 @@ export default function HomePage() {
         {appView === "landing" && (
           <div className="flex items-center gap-2">
             <a
+              href="/macro"
+              className="px-4 py-1.5 text-xs font-medium rounded-lg border border-io-border text-io-secondary hover:text-io-accent hover:border-io-accent transition-colors"
+            >
+              {isAr ? "الاقتصاد الكلي" : "Macro Intel"}
+            </a>
+            <a
+              href="/audit-dashboard"
+              className="px-4 py-1.5 text-xs font-medium rounded-lg border border-io-border text-io-secondary hover:text-io-accent hover:border-io-accent transition-colors"
+            >
+              {isAr ? "الحوكمة" : "Governance"}
+            </a>
+            <a
               href="/dashboard"
               className="px-4 py-1.5 text-xs font-medium rounded-lg border border-io-border text-io-secondary hover:text-io-accent hover:border-io-accent transition-colors"
             >
