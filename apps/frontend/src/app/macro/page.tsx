@@ -32,6 +32,7 @@ import {
   type IndicatorMetadata,
 } from "@/services/macro-api";
 import { evaluatePolicies, type PolicyEvalResult } from "@/services/policy-api";
+import { evaluateDecision, type DecisionResult } from "@/services/decision-api";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,13 @@ export default function MacroIntelligencePage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
 
+  // Live Decision Loop state
+  const [decisionResult, setDecisionResult] = useState<DecisionResult | null>(null);
+  const [decisionLoading, setDecisionLoading] = useState(false);
+  const [decisionEntity, setDecisionEntity] = useState("aramco");
+  const [decisionSector, setDecisionSector] = useState("energy");
+  const [decisionCoverage, setDecisionCoverage] = useState(5_000_000);
+
   const isRtl = locale === "ar";
 
   // ── Analysis ─────────────────────────────────────────────────────────
@@ -171,6 +179,32 @@ export default function MacroIntelligencePage() {
   useEffect(() => {
     runAnalysis();
   }, []);
+
+  // ── Live Decision Loop — auto-evaluate when macro context updates ──
+  const runDecision = useCallback(async () => {
+    if (!decisionEntity) return;
+    setDecisionLoading(true);
+    try {
+      const res = await evaluateDecision({
+        entity_id: decisionEntity,
+        sector: decisionSector,
+        requested_coverage: decisionCoverage,
+        indicators: indicators,
+      });
+      setDecisionResult(res);
+    } catch (e) {
+      console.error("Decision evaluation failed:", e);
+    } finally {
+      setDecisionLoading(false);
+    }
+  }, [decisionEntity, decisionSector, decisionCoverage, indicators]);
+
+  // Auto-trigger decision after macro analysis completes
+  useEffect(() => {
+    if (macroContext && autoRefresh) {
+      runDecision();
+    }
+  }, [macroContext, autoRefresh]);
 
   // ── Indicator change handler ──────────────────────────────────────────
   const updateIndicator = (key: string, value: number) => {
@@ -597,6 +631,223 @@ export default function MacroIntelligencePage() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════ */}
+        {/* SECTION 7: Live Decision Output (Macro → Decision Loop)   */}
+        {/* ══════════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-xl border-2 border-io-accent/20 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-io-accent rounded-lg flex items-center justify-center text-white text-sm font-bold">D</div>
+              <div>
+                <h3 className="text-base font-bold text-io-primary">
+                  {isRtl ? "قرار مباشر — Macro → Decision Loop" : "Live Decision — Macro → Decision Loop"}
+                </h3>
+                <p className="text-xs text-io-secondary mt-0.5">
+                  {isRtl
+                    ? "تغيير المؤشرات يُعيد تقييم القرار تلقائياً عبر 5 طبقات ذكاء"
+                    : "Indicator changes auto-trigger full 5-layer decision re-evaluation"}
+                </p>
+              </div>
+            </div>
+            {decisionLoading && (
+              <div className="w-5 h-5 border-2 border-io-accent border-t-transparent rounded-full animate-spin" />
+            )}
+          </div>
+
+          {/* Entity selector */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            <div>
+              <label className="text-[10px] font-semibold text-io-secondary uppercase tracking-wider">
+                {isRtl ? "الكيان" : "Entity"}
+              </label>
+              <select
+                value={decisionEntity}
+                onChange={(e) => setDecisionEntity(e.target.value)}
+                className="mt-1 w-full px-3 py-2 text-sm border border-io-border rounded-lg bg-white"
+              >
+                <option value="aramco">Saudi Aramco</option>
+                <option value="adnoc">ADNOC</option>
+                <option value="sabic">SABIC</option>
+                <option value="qnb">QNB</option>
+                <option value="emirates_nbd">Emirates NBD</option>
+                <option value="dp_world">DP World</option>
+                <option value="etihad">Etihad Airways</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-io-secondary uppercase tracking-wider">
+                {isRtl ? "القطاع" : "Sector"}
+              </label>
+              <select
+                value={decisionSector}
+                onChange={(e) => setDecisionSector(e.target.value)}
+                className="mt-1 w-full px-3 py-2 text-sm border border-io-border rounded-lg bg-white"
+              >
+                <option value="energy">Energy</option>
+                <option value="banking">Banking</option>
+                <option value="insurance">Insurance</option>
+                <option value="maritime">Maritime</option>
+                <option value="aviation">Aviation</option>
+                <option value="real_estate">Real Estate</option>
+                <option value="construction">Construction</option>
+                <option value="petrochemical">Petrochemical</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-io-secondary uppercase tracking-wider">
+                {isRtl ? "التغطية المطلوبة" : "Coverage"}
+              </label>
+              <select
+                value={decisionCoverage}
+                onChange={(e) => setDecisionCoverage(Number(e.target.value))}
+                className="mt-1 w-full px-3 py-2 text-sm border border-io-border rounded-lg bg-white"
+              >
+                <option value={1000000}>$1M</option>
+                <option value={5000000}>$5M</option>
+                <option value={10000000}>$10M</option>
+                <option value={50000000}>$50M</option>
+                <option value={100000000}>$100M</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Run Decision button */}
+          <button
+            onClick={runDecision}
+            disabled={decisionLoading}
+            className="w-full py-2.5 bg-io-accent text-white rounded-lg text-sm font-bold hover:bg-blue-800 transition-colors disabled:opacity-50 mb-5"
+          >
+            {decisionLoading
+              ? (isRtl ? "جاري التقييم..." : "Evaluating 5 layers...")
+              : (isRtl ? "تقييم القرار الآن" : "Run Decision Evaluation")}
+          </button>
+
+          {/* Decision Result */}
+          {decisionResult && (
+            <div className="space-y-4">
+              {/* Decision Banner */}
+              <div className={`p-5 rounded-xl border-2 ${
+                decisionResult.decision.decision === "APPROVED"
+                  ? "bg-emerald-50 border-emerald-200"
+                  : decisionResult.decision.decision === "CONDITIONAL"
+                    ? "bg-amber-50 border-amber-200"
+                    : "bg-red-50 border-red-200"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-io-secondary uppercase tracking-wider">
+                      {isRtl ? "القرار النهائي" : "Final Decision"}
+                    </p>
+                    <p className={`text-3xl font-bold mt-1 ${
+                      decisionResult.decision.decision === "APPROVED" ? "text-emerald-700"
+                        : decisionResult.decision.decision === "CONDITIONAL" ? "text-amber-700"
+                          : "text-red-700"
+                    }`}>
+                      {decisionResult.decision.decision}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-io-secondary">{isRtl ? "درجة المخاطر" : "Risk Score"}</p>
+                    <p className="text-3xl font-bold tabular-nums text-io-primary">
+                      {(decisionResult.decision.risk_score * 100).toFixed(1)}
+                    </p>
+                    <p className="text-xs text-io-secondary mt-0.5">{decisionResult.decision.risk_level}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="p-3 bg-io-bg rounded-lg border border-io-border">
+                  <p className="text-[10px] font-semibold text-io-secondary uppercase">{isRtl ? "التسعير" : "Pricing"}</p>
+                  <p className="text-lg font-bold text-io-primary mt-1">
+                    {decisionResult.decision.pricing?.premium_impact ?? "N/A"}
+                  </p>
+                </div>
+                <div className="p-3 bg-io-bg rounded-lg border border-io-border">
+                  <p className="text-[10px] font-semibold text-io-secondary uppercase">{isRtl ? "التغطية" : "Coverage"}</p>
+                  <p className="text-lg font-bold text-io-primary mt-1">
+                    {decisionResult.decision.coverage?.utilization_pct?.toFixed(0) ?? 0}%
+                  </p>
+                </div>
+                <div className="p-3 bg-io-bg rounded-lg border border-io-border">
+                  <p className="text-[10px] font-semibold text-io-secondary uppercase">{isRtl ? "الثقة" : "Confidence"}</p>
+                  <p className="text-lg font-bold text-io-primary mt-1">
+                    {(decisionResult.decision.confidence * 100).toFixed(0)}%
+                  </p>
+                </div>
+                <div className="p-3 bg-io-bg rounded-lg border border-io-border">
+                  <p className="text-[10px] font-semibold text-io-secondary uppercase">{isRtl ? "الشروط" : "Conditions"}</p>
+                  <p className="text-lg font-bold text-io-primary mt-1">
+                    {decisionResult.decision.conditions?.length ?? 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Layer Timing */}
+              {decisionResult.timing && (
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(decisionResult.timing).map(([layer, ms]) => (
+                    <span key={layer} className="px-2 py-1 bg-io-bg border border-io-border rounded text-[10px] text-io-secondary">
+                      {layer.replace("_ms", "")}: <span className="font-semibold tabular-nums">{ms}ms</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Explainability — Why this decision? */}
+              {decisionResult.explanation && decisionResult.explanation.length > 0 && (
+                <div className="p-4 bg-io-bg rounded-lg border border-io-border">
+                  <h4 className="text-xs font-bold text-io-primary uppercase tracking-wider mb-2">
+                    {isRtl ? "لماذا هذا القرار؟" : "Why This Decision?"}
+                  </h4>
+                  <div className="space-y-1.5">
+                    {decisionResult.explanation.map((line, i) => (
+                      <div key={i} className="flex items-start gap-2 text-xs">
+                        <span className="text-io-accent font-bold mt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="text-io-primary leading-relaxed">{line}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Policy section from decision */}
+              {decisionResult.policy && (decisionResult.policy as any).applied && (
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">
+                    {isRtl ? "السياسات المطبقة على القرار" : "Policy Rules Applied to Decision"}
+                  </h4>
+                  <p className="text-sm text-amber-700">
+                    {(decisionResult.policy as any).rules_matched} {isRtl ? "قاعدة مطابقة" : "rules matched"}
+                    {(decisionResult.policy as any).decision_override && (
+                      <span className="font-bold ms-2">
+                        → {(decisionResult.policy as any).decision_override}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {/* Decision Summary */}
+              {decisionResult.decision_summary && (
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs text-io-secondary italic">{decisionResult.decision_summary}</p>
+                </div>
+              )}
+
+              {/* Audit hash */}
+              {decisionResult.audit && (
+                <div className="flex gap-2 text-[10px] text-io-secondary">
+                  <span>Decision hash: {(decisionResult.audit as any).hash?.slice(0, 12)}...</span>
+                  <span>|</span>
+                  <span>Entity: {decisionResult.entity_label}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Audit Footer ─────────────────────────────────────────── */}
