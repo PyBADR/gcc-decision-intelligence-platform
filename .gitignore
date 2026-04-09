@@ -1,0 +1,47 @@
+# ── Dependencies ──────────────────────────────────────────────────
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Build ─────────────────────────────────────────────────────────
+.next/
+out/
+dist/
+build/
+*.egg-info/
+
+# ── Environment ───────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── IDE ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ── Data (runtime-generated) ─────────────────────────────────────
+apps/backend/data/*.db
+*.db
+*.sqlite3
+
+# ── Test / Coverage ──────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+
+# ── Docker ────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── OS ────────────────────────────────────────────────────────────
+Thumbs.db
+*.log
+
+# ── Claude / AI ───────────────────────────────────────────────────
+.claude/

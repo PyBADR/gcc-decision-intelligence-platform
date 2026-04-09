@@ -1,0 +1,49 @@
+name: Deployment Verification
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Get commit SHA
+        run: echo "COMMIT_SHA=${{ github.sha }}"
+
+      - name: Wait for deployment
+        run: sleep 60
+
+      - name: Verify Vercel Deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments?projectId=$PROJECT_ID")
+
+          echo "Response:"
+          echo "$RESPONSE"
+
+          DEPLOYMENT_SHA=$(echo "$RESPONSE" | jq -r '.deployments[0].meta.githubCommitSha')
+          STATUS=$(echo "$RESPONSE" | jq -r '.deployments[0].state')
+
+          echo "Deployment SHA: $DEPLOYMENT_SHA"
+          echo "Status: $STATUS"
+
+          if [ "$STATUS" != "READY" ]; then
+            echo "Deployment not ready"
+            exit 1
+          fi
+
+          if [ "$DEPLOYMENT_SHA" != "${{ github.sha }}" ]; then
+            echo "Commit mismatch!"
+            exit 1
+          fi
+
+          echo "Deployment Verified Successfully"
